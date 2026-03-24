@@ -121,11 +121,11 @@
 
   /* ── Vergil DOM scanning ─────────────────────────────── */
 
-  // Target: div.text inside span.instructor (course section rows)
-  // Contains "Last, First  (uni)"
+  // Target: span.instructor (course section rows)
+  // Name is inside the child div.text as "Last, First  (uni)"
   function findInstructorElements() {
     const found = [];
-    document.querySelectorAll("span.instructor div.text").forEach(el => {
+    document.querySelectorAll("span.instructor").forEach(el => {
       if (!el.getAttribute(ATTR)) found.push(el);
     });
     return found;
@@ -137,7 +137,10 @@
     if (el.getAttribute(ATTR)) return;
     el.setAttribute(ATTR, "pending");
 
-    const name = parseVergilName(el.textContent || "");
+    const textEl = el.querySelector("div.text");
+    if (!textEl) { el.setAttribute(ATTR, "skip"); return; }
+
+    const name = parseVergilName(textEl.textContent || "");
 
     if (!isValidName(name)) {
       el.setAttribute(ATTR, "skip");
@@ -152,6 +155,7 @@
 
     el.setAttribute(ATTR, "done");
     const badge = makeBadge(data);
+    // Insert after span.instructor, not inside the nested <a>
     el.insertAdjacentElement("afterend", badge);
   }
 
