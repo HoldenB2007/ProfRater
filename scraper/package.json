@@ -1,0 +1,14 @@
+{
+  "name": "culpa-scraper",
+  "version": "1.0.0",
+  "description": "Scrapes culpa.info and stores professor data in Supabase",
+  "type": "module",
+  "scripts": {
+    "scrape": "node index.js",
+    "discover": "node discover.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "playwright": "^1.42.0"
+  }
+}
