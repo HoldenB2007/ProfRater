@@ -103,21 +103,6 @@
   margin-bottom: 10px;
 }
 
-.culpa-tip-review       { margin-bottom: 10px; }
-.culpa-tip-review-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #75b3f0; font-weight: 600; margin-bottom: 4px; }
-.culpa-tip-review-text  { font-size: 12px; color: #ccc; line-height: 1.6; font-style: italic; max-height: 140px; overflow: hidden; }
-
-.culpa-tip-workload {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #aaa;
-  padding: 6px 8px;
-  background: #152236;
-  border-radius: 4px;
-}
-.culpa-tip-workload strong { color: #ddd; }
-
-.culpa-tip-date { margin-top: 4px; font-size: 10px; color: #555; }
 
 .culpa-tip-cta {
   margin-top: 8px;

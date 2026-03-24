@@ -70,8 +70,6 @@
 
     if (data.reviewCount > 0) {
       html += `<span class="culpa-count">${data.reviewCount} review${data.reviewCount !== 1 ? "s" : ""}</span>`;
-    } else if (data.reviewCount === -1) {
-      html += `<span class="culpa-count">view reviews</span>`;
     } else {
       html += `<span class="culpa-count">0 reviews</span>`;
     }
@@ -88,17 +86,6 @@
         <div class="culpa-tip-stats">${data.reviewCount} review${data.reviewCount !== 1 ? "s" : ""} on CULPA</div>
       `;
 
-      if (data.reviews?.length > 0) {
-        const rev = data.reviews[0];
-        tipHTML += `
-          <div class="culpa-tip-review">
-            <div class="culpa-tip-review-label">Latest review</div>
-            <div class="culpa-tip-review-text">"${rev.text}${rev.text.length >= 300 ? "…" : ""}"</div>
-            ${rev.workload ? `<div class="culpa-tip-workload"><strong>Workload:</strong> ${rev.workload}${rev.workload.length >= 200 ? "…" : ""}</div>` : ""}
-            ${rev.date ? `<div class="culpa-tip-date">${new Date(rev.date).toLocaleDateString()}</div>` : ""}
-          </div>
-        `;
-      }
 
 
       tipHTML += `<div class="culpa-tip-cta">Click box to view on CULPA</div>`;
@@ -224,5 +211,4 @@
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  console.log("[CULPA on Vergil] Content script active. Watching for instructors…");
 })();
