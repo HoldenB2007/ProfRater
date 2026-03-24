@@ -30,11 +30,10 @@ async function searchProfessor(first, last) {
   // The SPA calls /api/professor/search?queryString=...&maxResults=...
   const query = encodeURIComponent(`${first} ${last}`);
   const url = `${CULPA_BASE}/api/professor/search?queryString=${query}&maxResults=20`;
+  console.log("[CULPA] searching:", url);
 
-  const r = await fetch(url, {
-    signal: AbortSignal.timeout(5000),
-    headers: { "Content-Type": "application/json" }
-  });
+  const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  console.log("[CULPA] search response:", r.status, r.ok);
   if (!r.ok) return null;
   const results = await r.json();
   if (!Array.isArray(results) || !results.length) return null;
@@ -110,6 +109,7 @@ async function lookupProfessor(name) {
     result = null;
   }
 
+  console.log("[CULPA] result for", name, ":", result ? `${result.firstName} ${result.lastName} (${result.reviewCount} reviews)` : "null");
   if (result) await cacheSet(key, result);
   return result;
 }
