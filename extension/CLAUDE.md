@@ -22,7 +22,7 @@ extension/
 ├── content.css     Badge + tooltip styles (position: fixed tooltip on document.body)
 ├── popup.html      Extension popup UI
 ├── popup.js        Popup logic: status check + cache clear
-└── icons/          16/48/128px icons
+└── icons/          16/48/128/256px icons (transparent background PNG)
 ```
 
 ## culpa.info API (the only working API — discovered from SPA JS bundle)
@@ -80,8 +80,8 @@ The tooltip uses `position: fixed` and is positioned using `getBoundingClientRec
 ## popup.html / popup.js
 
 - Shows active/inactive status based on current tab URL
-- Nugget legend: Bronze (3.0+), Silver (3.5+), Gold (4.0+)
-- Logo: `icons/icon48.png`
+- Legend (renamed from "Nugget Legend"): Bronze (3.0+), Silver (3.5+), Gold (4.0+)
+- Logo: `icons/icon128.png` displayed at 48×48px (use 128px source for Retina sharpness)
 - Cache clear button sends `CULPA_CLEAR_CACHE` message to service worker
 
 ## Known issues / gotchas
@@ -98,6 +98,31 @@ The tooltip uses `position: fixed` and is positioned using `getBoundingClientRec
 3. To debug service worker: click "Service Worker" link on the extensions page → Console tab
 4. To debug content script: open Vergil → DevTools → Console (filter by extension)
 5. Commit + push to GitHub (no co-author lines)
+
+## Icons
+
+Source: `logo.png` (1024×1024, transparent background PNG — white bg was removed with PIL).
+To regenerate icons after updating logo.png:
+```bash
+# Remove white background first if needed
+python3 -c "
+from PIL import Image
+img = Image.open('logo.png').convert('RGBA')
+px = img.load()
+for y in range(img.size[1]):
+    for x in range(img.size[0]):
+        r,g,b,a = px[x,y]
+        if r>230 and g>230 and b>230: px[x,y]=(r,g,b,0)
+img.save('logo.png')
+"
+# Resize
+sips -z 256 256 logo.png --out extension/icons/icon256.png
+sips -z 128 128 logo.png --out extension/icons/icon128.png
+sips -z 48 48  logo.png --out extension/icons/icon48.png
+sips -z 16 16  logo.png --out extension/icons/icon16.png
+```
+The popup uses `icons/icon128.png` displayed at 48×48 CSS px (sharp on Retina).
+Chrome's extensions page uses `icons/icon256.png` for Retina sharpness.
 
 ## Scraper (`scraper/` directory)
 

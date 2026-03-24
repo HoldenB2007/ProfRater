@@ -36,9 +36,9 @@ culpa-vergil-extension/
 │   ├── background.js       Service worker: CULPA API lookups + 24h cache
 │   ├── content.js          Injected into Vergil: finds instructors, injects badges
 │   ├── content.css         Badge + tooltip styles
-│   ├── popup.html          Extension popup: status, nugget legend, cache clear
+│   ├── popup.html          Extension popup: status, legend, cache clear
 │   ├── popup.js            Popup script (status check + cache clear handler)
-│   └── icons/              16/48/128px icons (from logo.png)
+│   └── icons/              16/48/128/256px icons (transparent bg, from logo.png)
 ├── scraper/                ← Standalone Playwright scraper (optional/future use)
 │   ├── discover.js         Headless browser: dumps culpa.info HTML + network requests
 │   ├── index.js            Scraper entry point (scaffold)
