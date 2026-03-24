@@ -64,6 +64,7 @@
     if (nug.cls) badge.classList.add(nug.cls);
 
     let html = "";
+    if (data.avgRating != null) html += `<span class="culpa-rating">${data.avgRating.toFixed(1)}</span>`;
     if (nug.emoji) html += `<span class="culpa-nugget">${nug.emoji}</span>`;
     html += `<span class="culpa-label">CULPA</span>`;
 
@@ -83,6 +84,7 @@
           <strong>${data.firstName} ${data.lastName}</strong>
           ${nug.emoji ? `<span class="culpa-tip-nugget">${nug.emoji} ${nug.label}</span>` : ""}
         </div>
+        ${data.avgRating != null ? `<div class="culpa-tip-rating"><span class="culpa-tip-rating-num">${data.avgRating.toFixed(1)}</span><span class="culpa-tip-rating-max"> / 5</span></div>` : ""}
         <div class="culpa-tip-stats">${data.reviewCount} review${data.reviewCount !== 1 ? "s" : ""} on CULPA</div>
       `;
 

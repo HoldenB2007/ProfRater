@@ -57,15 +57,15 @@ async function searchProfessor(first, last) {
   return match?.professor_header || null;
 }
 
-async function getReviewCount(professorId) {
+async function getProfessorCard(professorId) {
   try {
-    const url = `${CULPA_BASE}/api/review/professor/${professorId}?page=1&sort_key=null&course_filter=null`;
+    const url = `${CULPA_BASE}/api/professor_page/card/${professorId}`;
     const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    if (!r.ok) return 0;
+    if (!r.ok) return null;
     const j = await r.json();
-    return j.number_of_reviews || 0;
+    return j.professor_summary || null;
   } catch (_) {
-    return 0;
+    return null;
   }
 }
 
@@ -73,8 +73,10 @@ async function lookupCulpa(first, last) {
   const prof = await searchProfessor(first, last);
   if (!prof) return null;
 
-  const reviewCount = await getReviewCount(prof.professor_id);
-  const nuggetNum   = prof.nugget ?? 0;
+  const card      = await getProfessorCard(prof.professor_id);
+  const nuggetNum = prof.nugget ?? 0;
+  const avgRating = card?.avg_rating ? Math.round(card.avg_rating * 10) / 10 : null;
+  const reviewCount = card?.num_reviews || 0;
 
   return {
     id:          prof.professor_id,
@@ -82,6 +84,7 @@ async function lookupCulpa(first, last) {
     lastName:    prof.last_name,
     nugget:      NUGGET_LABEL[nuggetNum] || "None",
     nuggetNum,
+    avgRating,
     reviewCount,
     culpaUrl:    `${CULPA_BASE}/professor/${prof.professor_id}`,
     source:      "culpa-api"
