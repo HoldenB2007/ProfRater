@@ -30,8 +30,9 @@ async function searchProfessor(first, last) {
   // The SPA calls /api/professor/search?queryString=...&maxResults=...
   const query = encodeURIComponent(`${first} ${last}`);
   const url = `${CULPA_BASE}/api/professor/search?queryString=${query}&maxResults=20`;
+  // Let network/HTTP errors throw — caller distinguishes them from genuine misses
   const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
-  if (!r.ok) return null;
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const results = await r.json();
   if (!Array.isArray(results) || !results.length) return null;
 
@@ -105,7 +106,7 @@ async function lookupProfessor(name) {
   try {
     result = await lookupCulpa(first, last);
   } catch (_) {
-    result = null;
+    return { error: true }; // API down / network failure — don't cache
   }
 
   if (result) await cacheSet(key, result);

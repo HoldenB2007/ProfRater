@@ -56,6 +56,22 @@
   background: linear-gradient(135deg, #2e1c0b, #3d2610);
 }
 
+/* Row badges sit below the instructor name, left-aligned with the cell */
+.culpa-badge.culpa-badge-row {
+  display: flex;
+  width: fit-content;
+  margin-left: 0;
+  margin-top: 3px;
+}
+
+/* Error state (culpa.info unreachable) */
+.culpa-badge.culpa-error {
+  background: #181010;
+  border-color: rgba(255, 80, 80, 0.15);
+  color: #666;
+  cursor: default;
+}
+
 .culpa-rating { font-weight: 700; font-size: 11px; color: #fff; }
 .culpa-nugget { font-size: 12px; line-height: 1; }
 .culpa-label  { font-weight: 700; letter-spacing: 0.5px; color: #75b3f0; font-size: 10px; text-transform: uppercase; }

@@ -21,9 +21,17 @@
     return new Promise(resolve => {
       chrome.runtime.sendMessage({ type: "CULPA_LOOKUP", name }, r => {
         if (chrome.runtime.lastError) resolve(null);
-        else resolve(r?.result || null);
+        else resolve(r?.result ?? null);
       });
     });
+  }
+
+  function makeErrorBadge() {
+    const badge = document.createElement("span");
+    badge.className = "culpa-badge culpa-error";
+    badge.textContent = "CULPA ?";
+    badge.title = "Could not reach culpa.info";
+    return badge;
   }
 
   /* ── Shared tooltip (appended to body to escape parent opacity) ── */
@@ -100,7 +108,8 @@
   /* ── Name parsing ────────────────────────────────────── */
 
   const NAME_CONNECTORS = new Set([
-    "de","di","von","van","el","al","la","le","du","da","dos","del","bin","ibn"
+    "de","di","von","van","el","al","la","le","du","da","dos","del","bin","ibn",
+    "der","den","ten","ter","af","av","op","zum","zur","y","e","o"
   ]);
 
   // Vergil format: "Last, First  (uni)" → "First Last"
@@ -124,9 +133,9 @@
     const words = text.split(/\s+/);
     if (words.length < 2 || words.length > 6) return false;
     return words.every(w =>
-      /^[A-Z]/.test(w) ||
+      /^\p{Lu}/u.test(w) ||                // Unicode uppercase (handles É, Ñ, Ö, etc.)
       NAME_CONNECTORS.has(w.toLowerCase()) ||
-      /^[A-Z]\.?$/.test(w)
+      /^[a-z]'\p{Lu}/u.test(w)             // d'Alembert, l'Hôpital style
     );
   }
 
@@ -170,9 +179,17 @@
 
     const data = await lookup(name);
     if (!data) { el.setAttribute(ATTR, "miss"); return; }
+    if (data.error) {
+      el.setAttribute(ATTR, "error");
+      const err = makeErrorBadge();
+      err.classList.add("culpa-badge-row");
+      el.insertAdjacentElement("afterend", err);
+      return;
+    }
 
     el.setAttribute(ATTR, "done");
     const badge = makeBadge(data);
+    badge.classList.add("culpa-badge-row");
     el.insertAdjacentElement("afterend", badge);
   }
 
@@ -185,6 +202,11 @@
 
     const data = await lookup(name);
     if (!data) { el.setAttribute(ATTR, "miss"); return; }
+    if (data.error) {
+      el.setAttribute(ATTR, "error");
+      el.appendChild(makeErrorBadge());
+      return;
+    }
 
     el.setAttribute(ATTR, "done");
     const badge = makeBadge(data);
