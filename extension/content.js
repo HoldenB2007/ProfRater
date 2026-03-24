@@ -100,7 +100,6 @@
         `;
       }
 
-      tipHTML += `<div class="culpa-tip-cta">Click to view on CULPA →</div>`;
 
       badge.addEventListener("mouseenter", () => showTooltip(badge, tipHTML));
       badge.addEventListener("mouseleave", hideTooltip);
