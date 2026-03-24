@@ -1,10 +1,11 @@
 // background.js — Handles CULPA lookups from the content script.
-// Strategy: try api.culpa.info first, fall back to culpa.info internal API probing,
-//           and finally provide a direct search link as a last resort.
+// Uses the live culpa.info internal API (discovered from the SPA bundle).
 
-const CULPA_API  = "http://api.culpa.info";
-const CULPA_SITE = "https://culpa.info";
+const CULPA_BASE = "https://culpa.info";
 const CACHE_TTL  = 1000 * 60 * 60 * 24; // 24 h
+
+// Nugget values from culpa.info source: 0=None, 1=Bronze, 2=Silver, 3=Gold
+const NUGGET_LABEL = { 0: "None", 1: "Bronze", 2: "Silver", 3: "Gold" };
 
 /* ── Cache helpers (chrome.storage.local) ───────────────── */
 
@@ -23,128 +24,72 @@ async function cacheSet(key, data) {
   });
 }
 
-/* ── Strategy 1 — Official REST API ─────────────────────── */
+/* ── CULPA API lookup ────────────────────────────────────── */
 
-async function tryAPI(first, last) {
+async function searchProfessor(first, last) {
+  // The SPA calls /api/professor/search?queryString=...&maxResults=...
+  const query = encodeURIComponent(`${first} ${last}`);
+  const url = `${CULPA_BASE}/api/professor/search?queryString=${query}&maxResults=20`;
+
+  const r = await fetch(url, {
+    signal: AbortSignal.timeout(5000),
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!r.ok) return null;
+  const results = await r.json();
+  if (!Array.isArray(results) || !results.length) return null;
+
+  const fl = first.toLowerCase();
+  const ll = last.toLowerCase();
+
+  // Exact match first, then last-name-only match
+  let match = results.find(item => {
+    const ph = item.professor_header;
+    return ph.first_name.toLowerCase() === fl &&
+           ph.last_name.toLowerCase()  === ll;
+  });
+  if (!match) {
+    match = results.find(item =>
+      item.professor_header.last_name.toLowerCase() === ll
+    );
+  }
+  if (!match) match = results[0];
+
+  return match?.professor_header || null;
+}
+
+async function getReviewCount(professorId) {
   try {
-    const r = await fetch(
-      `${CULPA_API}/professors/search/${encodeURIComponent(last)}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!r.ok) return null;
+    const url = `${CULPA_BASE}/api/review/professor/${professorId}?page=1&sort_key=null&course_filter=null`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) return 0;
     const j = await r.json();
-    if (j.status !== "success" || !j.professors?.length) return null;
-
-    let m = j.professors.find(p =>
-      p.first_name.toLowerCase() === first.toLowerCase() &&
-      p.last_name.toLowerCase()  === last.toLowerCase()
-    );
-    if (!m) m = j.professors.find(p =>
-      p.last_name.toLowerCase() === last.toLowerCase()
-    );
-    if (!m) return null;
-
-    // Fetch reviews (best effort)
-    let reviews = [];
-    try {
-      const rv = await fetch(
-        `${CULPA_API}/reviews/professor_id/${m.id}`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (rv.ok) {
-        const rj = await rv.json();
-        if (rj.status === "success") reviews = rj.reviews || [];
-      }
-    } catch (_) {}
-
-    return {
-      id: m.id,
-      firstName: m.first_name,
-      lastName: m.last_name,
-      nugget: m.nugget || "None",
-      reviewCount: reviews.length,
-      reviews: reviews.slice(0, 5).map(r => ({
-        text: (r.review_text || "").slice(0, 300),
-        workload: (r.workload_text || "").slice(0, 200),
-        date: r.created
-      })),
-      culpaUrl: `${CULPA_SITE}/professor/${m.id}`,
-      source: "api"
-    };
-  } catch (e) {
-    console.log("[CULPA] API unreachable:", e.message);
-    return null;
+    return j.number_of_reviews || 0;
+  } catch (_) {
+    return 0;
   }
 }
 
-/* ── Strategy 2 — Probe culpa.info internal endpoints ──── */
+async function lookupCulpa(first, last) {
+  const prof = await searchProfessor(first, last);
+  if (!prof) return null;
 
-async function tryProbe(first, last) {
-  // Modern CULPA (Spectator version) may expose /api/* routes.
-  // We try a few common patterns used by React+Next.js apps.
-  const q = encodeURIComponent(last);
-  const urls = [
-    `${CULPA_SITE}/api/search?q=${q}`,
-    `${CULPA_SITE}/api/professors?search=${q}`,
-    `${CULPA_SITE}/api/professors/search/${q}`,
-    `${CULPA_SITE}/api/v1/search?query=${q}`,
-  ];
+  const reviewCount = await getReviewCount(prof.professor_id);
+  const nuggetNum   = prof.nugget ?? 0;
 
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, {
-        signal: AbortSignal.timeout(4000),
-        headers: { Accept: "application/json" }
-      });
-      if (!r.ok) continue;
-      const text = await r.text();
-      let json;
-      try { json = JSON.parse(text); } catch { continue; }
-
-      const arr =
-        json.professors || json.results || json.data?.professors ||
-        json.data?.results || (Array.isArray(json) ? json : null);
-      if (!arr?.length) continue;
-
-      const match = arr.find(p => {
-        const fn = (p.first_name || p.firstName || "").toLowerCase();
-        const ln = (p.last_name || p.lastName || p.name || "").toLowerCase();
-        return fn.includes(first.toLowerCase()) && ln.includes(last.toLowerCase());
-      });
-      if (!match) continue;
-
-      const id = match.id || match._id || 0;
-      return {
-        id,
-        firstName: match.first_name || match.firstName || first,
-        lastName: match.last_name || match.lastName || last,
-        nugget: match.nugget || match.badge || "None",
-        reviewCount: match.review_count || match.reviewCount || match.reviews?.length || 0,
-        reviews: [],
-        culpaUrl: `${CULPA_SITE}/professor/${id}`,
-        source: "site-api"
-      };
-    } catch (_) {}
-  }
-  return null;
-}
-
-/* ── Strategy 3 — Link-only fallback ────────────────────── */
-
-function linkFallback(first, last) {
   return {
-    id: 0,
-    firstName: first,
-    lastName: last,
-    nugget: "None",
-    reviewCount: -1, // signals "unknown — click to check"
-    reviews: [],
-    culpaUrl: `${CULPA_SITE}`,
-    source: "link-only"
+    id:          prof.professor_id,
+    firstName:   prof.first_name,
+    lastName:    prof.last_name,
+    nugget:      NUGGET_LABEL[nuggetNum] || "None",
+    nuggetNum,
+    reviewCount,
+    culpaUrl:    `${CULPA_BASE}/professor/${prof.professor_id}`,
+    source:      "culpa-api"
   };
 }
 
-/* ── Main lookup ────────────────────────────────────────── */
+/* ── Main lookup (with cache) ────────────────────────────── */
 
 async function lookupProfessor(name) {
   const key = `culpa:${name.toLowerCase().trim()}`;
@@ -157,12 +102,15 @@ async function lookupProfessor(name) {
   const first = parts[0];
   const last  = parts[parts.length - 1];
 
-  let result =
-    (await tryAPI(first, last)) ||
-    (await tryProbe(first, last)) ||
-    linkFallback(first, last);
+  let result;
+  try {
+    result = await lookupCulpa(first, last);
+  } catch (e) {
+    console.log("[CULPA] lookup failed:", e.message);
+    result = null;
+  }
 
-  await cacheSet(key, result);
+  if (result) await cacheSet(key, result);
   return result;
 }
 

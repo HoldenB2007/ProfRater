@@ -10,8 +10,9 @@
 
   const NUGGETS = {
     Gold:   { emoji: "🥇", label: "Gold Nugget",   cls: "culpa-gold" },
-    Silver: { emoji: "🥈", label: "Silver Nugget",  cls: "culpa-silver" },
-    None:   { emoji: "",   label: "",               cls: "" }
+    Silver: { emoji: "🥈", label: "Silver Nugget", cls: "culpa-silver" },
+    Bronze: { emoji: "🥉", label: "Bronze Nugget", cls: "culpa-bronze" },
+    None:   { emoji: "",   label: "",              cls: "" }
   };
 
   /* ── Messaging ───────────────────────────────────────── */
