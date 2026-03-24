@@ -73,14 +73,15 @@
   overflow-y: auto;
   background: #14142a;
   color: #e0e0e0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #333;
+  opacity: 1;
   border-radius: 10px;
   padding: 14px 16px;
   font-size: 12px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   line-height: 1.5;
   z-index: 2147483647;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.9), 0 0 0 1px #222;
   pointer-events: none;
   text-align: left;
 }
@@ -110,7 +111,7 @@
   font-size: 11px;
   margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid #2a2a3a;
 }
 
 .culpa-tip-review       { margin-bottom: 10px; }
@@ -122,7 +123,7 @@
   font-size: 11px;
   color: #aaa;
   padding: 6px 8px;
-  background: rgba(255,255,255,0.04);
+  background: #1e1e30;
   border-radius: 4px;
 }
 .culpa-tip-workload strong { color: #ddd; }
@@ -132,7 +133,7 @@
 .culpa-tip-cta {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid #2a2a3a;
   color: #75b3f0;
   font-size: 11px;
   font-weight: 600;
