@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0e0e1c;
+      color: #d0d0d0;
+      padding: 20px;
+    }
+
+    .header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #1a3a5c, #2a5a8c);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #75b3f0; letter-spacing: -1px;
+    }
+    .title    { font-size: 16px; font-weight: 700; color: #fff; }
+    .subtitle { font-size: 11px; color: #555; margin-top: 1px; }
+
+    .desc { font-size: 12px; color: #888; line-height: 1.6; margin-bottom: 14px; }
+
+    .status {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; border-radius: 6px;
+      font-size: 12px; font-weight: 500; margin-bottom: 14px;
+    }
+    .status.active   { background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2); color: #81c784; }
+    .status.inactive { background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.2); color: #ffb74d; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .active .dot   { background: #4caf50; }
+    .inactive .dot { background: #ff9800; }
+
+    .legend-title { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .nuggets { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .nug { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 5px 8px; border-radius: 4px; background: rgba(255,255,255,0.025); }
+    .nug .e { font-size: 14px; }
+
+    .actions { display: flex; gap: 8px; margin-bottom: 10px; }
+    .actions a, .actions button {
+      flex: 1; text-align: center; padding: 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; text-decoration: none; border: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .actions .primary { background: #1a3a5c; color: #75b3f0; }
+    .actions .primary:hover { background: #1e4a70; }
+    .actions .secondary { background: rgba(255,255,255,0.04); color: #888; }
+    .actions .secondary:hover { background: rgba(255,255,255,0.07); }
+
+    .clear-btn {
+      width: 100%; padding: 7px; border-radius: 6px;
+      background: rgba(255,255,255,0.03); color: #666;
+      font-size: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .clear-btn:hover { background: rgba(255,80,80,0.08); color: #e57373; border-color: rgba(255,80,80,0.2); }
+
+    .footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px; color: #444; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">C</div>
+    <div>
+      <div class="title">CULPA on Vergil</div>
+      <div class="subtitle">v1.1.0</div>
+    </div>
+  </div>
+
+  <div class="desc">
+    Shows CULPA professor ratings and reviews next to instructor names on Vergil course search.
+  </div>
+
+  <div id="status" class="status inactive">
+    <div class="dot"></div>
+    <span>Navigate to Vergil to activate</span>
+  </div>
+
+  <div class="legend-title">Nugget Legend</div>
+  <div class="nuggets">
+    <div class="nug"><span class="e">🥇</span> Gold — top-rated, consistently praised</div>
+    <div class="nug"><span class="e">🥈</span> Silver — highly rated by students</div>
+  </div>
+
+  <div class="actions">
+    <a href="https://culpa.info" target="_blank" class="primary">Open CULPA</a>
+    <a href="https://vergil.columbia.edu/vergil" target="_blank" class="secondary">Open Vergil</a>
+  </div>
+
+  <button class="clear-btn" id="clear">Clear cached data (refresh ratings)</button>
+
+  <div class="footer">Not affiliated with Columbia University or CULPA.</div>
+
+  <script>
+    // Status check
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const url = tabs[0]?.url || "";
+      if (url.includes("vergil.columbia.edu") || url.includes("vergil.registrar.columbia.edu")) {
+        const s = document.getElementById("status");
+        s.className = "status active";
+        s.innerHTML = '<div class="dot"></div><span>Active on this page</span>';
+      }
+    });
+
+    // Cache clear
+    document.getElementById("clear").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "CULPA_CLEAR_CACHE" }, () => {
+        const btn = document.getElementById("clear");
+        btn.textContent = "Cache cleared ✓";
+        btn.style.color = "#81c784";
+        setTimeout(() => {
+          btn.textContent = "Clear cached data (refresh ratings)";
+          btn.style.color = "";
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -13,6 +13,7 @@ When you browse courses on **Vergil** (`vergil.columbia.edu`), this extension au
    - Falls back to a direct CULPA link so you can check manually
 3. **Injects a compact badge** next to each instructor showing:
    - 🥇 Gold or 🥈 Silver nugget status (if applicable)
+   - Gold or Silver nugget status (if applicable)
    - Number of CULPA reviews
    - Hover tooltip with the latest review preview and workload info
    - Click to open the professor's full CULPA page
