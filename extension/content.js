@@ -145,12 +145,22 @@
 
   /* ── Vergil DOM scanning ─────────────────────────────── */
 
-  // Target: span.instructor (course section rows)
-  // Name is inside the child div.text as "Last, First  (uni)"
+  // Course section rows: span.instructor > div.text ("Last, First (uni)")
   function findInstructorElements() {
     const found = [];
     document.querySelectorAll("span.instructor").forEach(el => {
       if (!el.getAttribute(ATTR)) found.push(el);
+    });
+    return found;
+  }
+
+  // Instructor autocomplete dropdown: mat-option containing a UNI pattern
+  function findDropdownElements() {
+    const found = [];
+    document.querySelectorAll("mat-option").forEach(el => {
+      if (!el.getAttribute(ATTR) && /\([a-z]+\d+\)/i.test(el.textContent)) {
+        found.push(el);
+      }
     });
     return found;
   }
@@ -172,22 +182,35 @@
     }
 
     const data = await lookup(name);
-    if (!data) {
-      el.setAttribute(ATTR, "miss");
-      return;
-    }
+    if (!data) { el.setAttribute(ATTR, "miss"); return; }
 
     el.setAttribute(ATTR, "done");
     const badge = makeBadge(data);
-    // Insert after span.instructor, not inside the nested <a>
     el.insertAdjacentElement("afterend", badge);
+  }
+
+  async function processDropdownElement(el) {
+    if (el.getAttribute(ATTR)) return;
+    el.setAttribute(ATTR, "pending");
+
+    const name = parseVergilName(el.textContent || "");
+    if (!isValidName(name)) { el.setAttribute(ATTR, "skip"); return; }
+
+    const data = await lookup(name);
+    if (!data) { el.setAttribute(ATTR, "miss"); return; }
+
+    el.setAttribute(ATTR, "done");
+    const badge = makeBadge(data);
+    el.appendChild(badge);
   }
 
   /* ── Main scan loop ──────────────────────────────────── */
 
   async function scan() {
-    const elements = findInstructorElements();
-    await Promise.allSettled(elements.map(el => processElement(el)));
+    await Promise.allSettled([
+      ...findInstructorElements().map(el => processElement(el)),
+      ...findDropdownElements().map(el => processDropdownElement(el)),
+    ]);
   }
 
   // Initial scan with a small delay to let Vergil render
