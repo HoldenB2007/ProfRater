@@ -1,2 +1,4 @@
 node_modules/
 scraper/.env
+CLAUDE.md
+.claude/
