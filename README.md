@@ -39,12 +39,6 @@ culpa-vergil-extension/
 │   ├── popup.html          Extension popup: status, legend, cache clear
 │   ├── popup.js            Popup script (status check + cache clear handler)
 │   └── icons/              16/48/128/256px icons (transparent bg, from logo.png)
-├── scraper/                ← Standalone Playwright scraper (optional/future use)
-│   ├── discover.js         Headless browser: dumps culpa.info HTML + network requests
-│   ├── index.js            Scraper entry point (scaffold)
-│   ├── db.js               Supabase helpers (upsertProfessor, upsertReviews, lookup)
-│   ├── schema.sql          Supabase table definitions
-│   └── package.json        playwright + @supabase/supabase-js
 ├── logo.png                Project logo (source for icons)
 └── .gitignore
 ```
@@ -124,22 +118,6 @@ If badges stop appearing:
 | Scan debounce | `content.js` — `DEBOUNCE_MS` (default 600ms) |
 | Popup content | `popup.html` + `popup.js` |
 
-## Scraper (`scraper/`)
-
-A Playwright-based scraper was built as an alternative data source (Supabase backend). It is not currently used by the extension — the extension queries culpa.info directly. The scraper is kept as a fallback in case the culpa.info API changes.
-
-To run discovery:
-```bash
-cd scraper
-npm install
-node discover.js   # dumps culpa.info HTML + captured API requests
-```
-
-If you want to use Supabase instead:
-1. Run `schema.sql` in your Supabase SQL editor
-2. Copy `scraper/.env.example` to `scraper/.env` and fill in credentials
-3. Implement `scraper/index.js` using the API endpoints above
-4. Update `background.js` to query Supabase instead of culpa.info directly
 
 ## Privacy
 

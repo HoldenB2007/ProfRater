@@ -124,11 +124,3 @@ sips -z 16 16  logo.png --out extension/icons/icon16.png
 The popup uses `icons/icon128.png` displayed at 48×48 CSS px (sharp on Retina).
 Chrome's extensions page uses `icons/icon256.png` for Retina sharpness.
 
-## Scraper (`scraper/` directory)
-
-Not currently used by the extension. Built as a fallback in case the culpa.info API breaks.
-- `discover.js`: headless Playwright script that dumps culpa.info rendered HTML + network requests
-- `index.js`: scaffold for full scraper (not implemented)
-- `db.js`: Supabase client helpers
-- `schema.sql`: professors + reviews tables
-- Requires `scraper/.env` with `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
