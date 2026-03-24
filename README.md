@@ -126,6 +126,8 @@ If badges stop appearing:
 - No analytics or tracking
 - Only runs on `vergil.columbia.edu` pages
 
+Full privacy policy: https://holdenb2007.github.io/ProfRater/privacy.html
+
 ## Disclaimer
 
 Not affiliated with Columbia University, CULPA, or the Columbia Spectator.
