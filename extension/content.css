@@ -70,7 +70,7 @@
 .culpa-tooltip {
   display: none;
   position: fixed;
-  width: 260px;
+  width: 200px;
   max-height: 320px;
   overflow-y: auto;
   background: #0e1a2e;
@@ -120,10 +120,8 @@
 .culpa-tip-date { margin-top: 4px; font-size: 10px; color: #555; }
 
 .culpa-tip-cta {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #2a2a3a;
+  margin-top: 8px;
   color: #75b3f0;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
