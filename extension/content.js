@@ -26,6 +26,30 @@
     });
   }
 
+  /* ── Shared tooltip (appended to body to escape parent opacity) ── */
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "culpa-tooltip";
+  document.body.appendChild(tooltip);
+
+  function showTooltip(badge, html) {
+    tooltip.innerHTML = html;
+    tooltip.style.display = "block";
+    const rect = badge.getBoundingClientRect();
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+    let top = rect.top + scrollY - tooltip.offsetHeight - 10;
+    let left = rect.left + scrollX + rect.width / 2 - tooltip.offsetWidth / 2;
+    // Keep within viewport horizontally
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltip.offsetWidth - 8));
+    tooltip.style.top  = top + "px";
+    tooltip.style.left = left + "px";
+  }
+
+  function hideTooltip() {
+    tooltip.style.display = "none";
+  }
+
   /* ── Badge creation ──────────────────────────────────── */
 
   function makeBadge(data) {
@@ -39,7 +63,6 @@
     const nug = NUGGETS[data.nugget] || NUGGETS.None;
     if (nug.cls) badge.classList.add(nug.cls);
 
-    // Content
     let html = "";
     if (nug.emoji) html += `<span class="culpa-nugget">${nug.emoji}</span>`;
     html += `<span class="culpa-label">CULPA</span>`;
@@ -54,11 +77,7 @@
 
     badge.innerHTML = html;
 
-    // Tooltip (only if we have review data)
-    if (data.reviews?.length > 0 || data.reviewCount > 0) {
-      const tip = document.createElement("div");
-      tip.className = "culpa-tooltip";
-
+    if (data.reviewCount > 0) {
       let tipHTML = `
         <div class="culpa-tip-header">
           <strong>${data.firstName} ${data.lastName}</strong>
@@ -80,8 +99,9 @@
       }
 
       tipHTML += `<div class="culpa-tip-cta">Click to view on CULPA →</div>`;
-      tip.innerHTML = tipHTML;
-      badge.appendChild(tip);
+
+      badge.addEventListener("mouseenter", () => showTooltip(badge, tipHTML));
+      badge.addEventListener("mouseleave", hideTooltip);
     }
 
     return badge;
