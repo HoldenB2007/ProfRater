@@ -7,7 +7,6 @@
   "host_permissions": [
     "https://vergil.columbia.edu/*",
     "https://vergil.registrar.columbia.edu/*",
-    "http://api.culpa.info/*",
     "https://culpa.info/*"
   ],
   "content_scripts": [

@@ -30,10 +30,7 @@ async function searchProfessor(first, last) {
   // The SPA calls /api/professor/search?queryString=...&maxResults=...
   const query = encodeURIComponent(`${first} ${last}`);
   const url = `${CULPA_BASE}/api/professor/search?queryString=${query}&maxResults=20`;
-  console.log("[CULPA] searching:", url);
-
   const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
-  console.log("[CULPA] search response:", r.status, r.ok);
   if (!r.ok) return null;
   const results = await r.json();
   if (!Array.isArray(results) || !results.length) return null;
@@ -107,12 +104,10 @@ async function lookupProfessor(name) {
   let result;
   try {
     result = await lookupCulpa(first, last);
-  } catch (e) {
-    console.log("[CULPA] lookup failed:", e.message);
+  } catch (_) {
     result = null;
   }
 
-  console.log("[CULPA] result for", name, ":", result ? `${result.firstName} ${result.lastName} (${result.reviewCount} reviews)` : "null");
   if (result) await cacheSet(key, result);
   return result;
 }
@@ -130,4 +125,3 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-console.log("[CULPA on Vergil] Service worker ready.");
