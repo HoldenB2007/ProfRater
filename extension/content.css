@@ -64,7 +64,7 @@
 
 .culpa-tooltip {
   display: none;
-  position: absolute;
+  position: fixed;
   width: 340px;
   max-height: 420px;
   overflow-y: auto;

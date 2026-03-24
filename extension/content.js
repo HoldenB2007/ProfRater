@@ -34,16 +34,16 @@
 
   function showTooltip(badge, html) {
     tooltip.innerHTML = html;
+    tooltip.style.visibility = "hidden";
     tooltip.style.display = "block";
+    // Measure after layout
     const rect = badge.getBoundingClientRect();
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-    let top = rect.top + scrollY - tooltip.offsetHeight - 10;
-    let left = rect.left + scrollX + rect.width / 2 - tooltip.offsetWidth / 2;
-    // Keep within viewport horizontally
+    let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2;
     left = Math.max(8, Math.min(left, window.innerWidth - tooltip.offsetWidth - 8));
-    tooltip.style.top  = top + "px";
+    const top = rect.top - tooltip.offsetHeight - 10;
     tooltip.style.left = left + "px";
+    tooltip.style.top  = top + "px";
+    tooltip.style.visibility = "visible";
   }
 
   function hideTooltip() {
