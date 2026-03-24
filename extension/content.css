@@ -71,10 +71,9 @@
   width: 340px;
   max-height: 420px;
   overflow-y: auto;
-  background: #14142a;
+  background: #0e1a2e;
   color: #e0e0e0;
-  border: 1px solid #333;
-  opacity: 1;
+  border: 1px solid #1e3a5f;
   border-radius: 10px;
   padding: 14px 16px;
   font-size: 12px;
@@ -94,7 +93,7 @@
   left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: #14142a;
+  border-top-color: #0e1a2e;
 }
 
 .culpa-tip-header {
@@ -123,7 +122,7 @@
   font-size: 11px;
   color: #aaa;
   padding: 6px 8px;
-  background: #1e1e30;
+  background: #152236;
   border-radius: 4px;
 }
 .culpa-tip-workload strong { color: #ddd; }
