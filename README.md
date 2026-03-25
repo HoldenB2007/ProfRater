@@ -2,6 +2,21 @@
 
 Shows CULPA professor ratings directly on Columbia's Vergil course registration page. Available as a Chrome extension and a Safari extension.
 
+## Quick install
+
+**Chrome** — [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/culpa-on-vergil/aefannamlbcifgohmhmhbpnabfcmmofe)
+
+**Safari** — requires Xcode (free, ~7GB from the Mac App Store):
+```bash
+git clone https://github.com/HoldenB2007/ProfRater.git
+cd ProfRater
+xcrun safari-web-extension-converter safari/ --app-name "CULPA on Vergil" --bundle-identifier com.holdenb.culpavergil --macos-only --no-prompt
+open "CULPA on Vergil/CULPA on Vergil.xcodeproj"
+```
+Then in Xcode: set both targets' Signing Certificate to **Sign to Run Locally** → press **⌘R**. In Safari: **Develop → Developer Settings → Allow Unsigned Extensions**, then enable in **Safari → Settings → Extensions**.
+
+> Note: "Allow Unsigned Extensions" must be re-enabled each time Safari relaunches.
+
 ## What it does
 
 When you browse courses on **Vergil** (`vergil.columbia.edu`), the extension automatically:
