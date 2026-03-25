@@ -4,7 +4,7 @@ Shows CULPA professor ratings directly on Columbia's Vergil course registration 
 
 ## Quick install
 
-**Chrome** — [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/culpa-on-vergil/aefannamlbcifgohmhmhbpnabfcmmofe)
+**Chrome** — load unpacked from the `chrome/` folder (see instructions below)
 
 **Safari** — requires Xcode (free, ~7GB from the Mac App Store):
 ```bash
