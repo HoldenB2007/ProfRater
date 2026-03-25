@@ -1,0 +1,128 @@
+/* ──────────────────────────────────────────────
+   CULPA on Vergil — injected badge & tooltip styles
+   ────────────────────────────────────────────── */
+
+/* ── Badge ──────────────────────────────────── */
+
+.culpa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+  text-decoration: none !important;
+  cursor: pointer;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.culpa-badge:hover {
+  background: #2a2a4a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  text-decoration: none !important;
+  color: #e0e0e0;
+}
+
+/* Nugget variants */
+.culpa-badge.culpa-gold {
+  background: linear-gradient(135deg, #2e2409, #3d310f);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+.culpa-badge.culpa-gold:hover {
+  background: linear-gradient(135deg, #3d310f, #4d4115);
+}
+.culpa-badge.culpa-silver {
+  background: linear-gradient(135deg, #1e2228, #282e36);
+  border-color: rgba(192, 192, 192, 0.3);
+}
+.culpa-badge.culpa-silver:hover {
+  background: linear-gradient(135deg, #282e36, #333a44);
+}
+.culpa-badge.culpa-bronze {
+  background: linear-gradient(135deg, #221509, #2e1c0b);
+  border-color: rgba(205, 127, 50, 0.3);
+}
+.culpa-badge.culpa-bronze:hover {
+  background: linear-gradient(135deg, #2e1c0b, #3d2610);
+}
+
+/* Row badges sit below the instructor name, left-aligned with the cell */
+.culpa-badge.culpa-badge-row {
+  display: flex;
+  width: fit-content;
+  margin-left: 0;
+  margin-top: 3px;
+}
+
+/* Error state (culpa.info unreachable) */
+.culpa-badge.culpa-error {
+  background: #181010;
+  border-color: rgba(255, 80, 80, 0.15);
+  color: #666;
+  cursor: default;
+}
+
+.culpa-rating { font-weight: 700; font-size: 11px; color: #fff; }
+.culpa-nugget { font-size: 12px; line-height: 1; }
+.culpa-label  { font-weight: 700; letter-spacing: 0.5px; color: #75b3f0; font-size: 10px; text-transform: uppercase; }
+.culpa-count  { color: #aaa; font-size: 10px; }
+
+.culpa-tip-rating     { margin-bottom: 6px; }
+.culpa-tip-rating-num { font-size: 22px; font-weight: 700; color: #fff; }
+.culpa-tip-rating-max { font-size: 13px; color: #666; }
+
+/* ── Tooltip ────────────────────────────────── */
+
+.culpa-tooltip {
+  display: none;
+  position: fixed;
+  width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #0e1a2e;
+  color: #e0e0e0;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+  z-index: 2147483647;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.9);
+  pointer-events: none;
+  text-align: left;
+}
+
+
+.culpa-tip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.culpa-tip-header strong { font-size: 14px; color: #fff; }
+.culpa-tip-nugget        { font-size: 11px; color: #ffc107; font-weight: 600; }
+
+.culpa-tip-stats {
+  color: #777;
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+
+.culpa-tip-cta {
+  margin-top: 8px;
+  color: #75b3f0;
+  font-size: 10px;
+  font-weight: 600;
+}

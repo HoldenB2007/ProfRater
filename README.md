@@ -1,6 +1,6 @@
-# CULPA on Vergil — Chrome Extension
+# CULPA on Vergil
 
-Shows CULPA professor ratings directly on Columbia's Vergil course registration page.
+Shows CULPA professor ratings directly on Columbia's Vergil course registration page. Available as a Chrome extension and a Safari extension.
 
 ## What it does
 
@@ -19,19 +19,38 @@ When you browse courses on **Vergil** (`vergil.columbia.edu`), the extension aut
 
 https://github.com/HoldenB2007/ProfRater.git
 
-## Installation (load unpacked)
+## Installation — Chrome
 
 1. Clone or download this repo
 2. Open Chrome → `chrome://extensions`
 3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** → select the `extension/` folder
+4. Click **Load unpacked** → select the `chrome/` folder
 5. Navigate to Vergil — badges appear automatically
+
+## Installation — Safari
+
+Safari Web Extensions must be wrapped in a native app using Xcode.
+
+1. Clone this repo
+2. Run the converter (requires Xcode command-line tools):
+   ```
+   xcrun safari-web-extension-converter safari/ \
+     --app-name "CULPA on Vergil" \
+     --bundle-identifier com.holdenb.culpavergil \
+     --macos-only
+   ```
+3. Open the generated Xcode project → **Product → Run** (⌘R)
+4. In Safari: **Develop → Allow Unsigned Extensions** (one-time)
+5. Open **Safari → Settings → Extensions** → enable **CULPA on Vergil**
+6. Navigate to Vergil — badges appear automatically
+
+> If the Develop menu isn't visible: **Safari → Settings → Advanced → Show features for web developers**
 
 ## File structure
 
 ```
 culpa-vergil-extension/
-├── extension/              ← Load this folder as the Chrome extension
+├── chrome/                 ← Load this folder as the Chrome extension
 │   ├── manifest.json       MV3 config, permissions, host rules
 │   ├── background.js       Service worker: CULPA API lookups + 24h cache
 │   ├── content.js          Injected into Vergil: finds instructors, injects badges
@@ -39,6 +58,14 @@ culpa-vergil-extension/
 │   ├── popup.html          Extension popup: status, legend, cache clear
 │   ├── popup.js            Popup script (status check + cache clear handler)
 │   └── icons/              16/48/128/256px icons (transparent bg, from logo.png)
+├── safari/                 ← Web extension source for Safari (same structure as chrome/)
+│   ├── manifest.json
+│   ├── background.js
+│   ├── content.js
+│   ├── content.css
+│   ├── popup.html
+│   ├── popup.js
+│   └── icons/
 ├── logo.png                Project logo (source for icons)
 └── .gitignore
 ```
@@ -89,7 +116,7 @@ Base: `https://culpa.info`
 
 The API was discovered by downloading `culpa.info/static/js/main.*.js` and grepping for `api/` strings. The search parameter name is `queryString` (not `q` or `query`).
 
-**CORS note:** `culpa.info/api/*` has `Access-Control-Allow-Origin: http://localhost:3000`. Chrome extension service workers with `host_permissions` for `https://culpa.info/*` bypass this restriction. Do NOT add `Content-Type: application/json` to GET requests — it triggers a preflight that fails.
+**CORS note:** `culpa.info/api/*` has `Access-Control-Allow-Origin: http://localhost:3000`. Chrome and Safari extension service workers with `host_permissions` for `https://culpa.info/*` bypass this restriction. Do NOT add `Content-Type: application/json` to GET requests — it triggers a preflight that fails.
 
 ## Vergil DOM notes
 
