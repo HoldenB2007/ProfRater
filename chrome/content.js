@@ -17,13 +17,18 @@
 
   /* ── Messaging ───────────────────────────────────────── */
 
-  function lookup(name) {
+  function lookup(name, uni) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ type: "CULPA_LOOKUP", name }, r => {
+      chrome.runtime.sendMessage({ type: "CULPA_LOOKUP", name, uni }, r => {
         if (chrome.runtime.lastError) resolve(null);
         else resolve(r?.result ?? null);
       });
     });
+  }
+
+  function extractUni(raw) {
+    const m = raw.match(/\(([a-z]+\d+)\)/i);
+    return m ? m[1].toLowerCase() : null;
   }
 
   function makeErrorBadge() {
@@ -31,6 +36,13 @@
     badge.className = "culpa-badge culpa-error";
     badge.textContent = "CULPA ?";
     badge.title = "Could not reach culpa.info";
+    return badge;
+  }
+
+  function makeNotFoundBadge() {
+    const badge = document.createElement("span");
+    badge.className = "culpa-badge culpa-not-found";
+    badge.innerHTML = `<span class="culpa-label">CULPA</span><span class="culpa-count">not found</span>`;
     return badge;
   }
 
@@ -170,15 +182,23 @@
     const textEl = el.querySelector("div.text");
     if (!textEl) { el.setAttribute(ATTR, "skip"); return; }
 
-    const name = parseVergilName(textEl.textContent || "");
+    const raw  = textEl.textContent || "";
+    const uni  = extractUni(raw);
+    const name = parseVergilName(raw);
 
     if (!isValidName(name)) {
       el.setAttribute(ATTR, "skip");
       return;
     }
 
-    const data = await lookup(name);
-    if (!data) { el.setAttribute(ATTR, "miss"); return; }
+    const data = await lookup(name, uni);
+    if (!data) {
+      el.setAttribute(ATTR, "miss");
+      const nf = makeNotFoundBadge();
+      nf.classList.add("culpa-badge-row");
+      el.insertAdjacentElement("afterend", nf);
+      return;
+    }
     if (data.error) {
       el.setAttribute(ATTR, "error");
       const err = makeErrorBadge();
@@ -197,11 +217,17 @@
     if (el.getAttribute(ATTR)) return;
     el.setAttribute(ATTR, "pending");
 
-    const name = parseVergilName(el.textContent || "");
+    const raw  = el.textContent || "";
+    const uni  = extractUni(raw);
+    const name = parseVergilName(raw);
     if (!isValidName(name)) { el.setAttribute(ATTR, "skip"); return; }
 
-    const data = await lookup(name);
-    if (!data) { el.setAttribute(ATTR, "miss"); return; }
+    const data = await lookup(name, uni);
+    if (!data) {
+      el.setAttribute(ATTR, "miss");
+      el.appendChild(makeNotFoundBadge());
+      return;
+    }
     if (data.error) {
       el.setAttribute(ATTR, "error");
       el.appendChild(makeErrorBadge());

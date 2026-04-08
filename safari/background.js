@@ -39,18 +39,34 @@ async function searchProfessor(first, last) {
   const fl = first.toLowerCase();
   const ll = last.toLowerCase();
 
-  // Exact match first, then last-name-only match
+  // 1. Exact match (full first name + last name)
   let match = results.find(item => {
     const ph = item.professor_header;
     return ph.first_name.toLowerCase() === fl &&
            ph.last_name.toLowerCase()  === ll;
   });
+
+  // 2. Partial first-name match — handles CULPA/Vergil storing different lengths
+  //    e.g. Vergil "Mary Ann", CULPA "Mary" or vice versa
   if (!match) {
-    match = results.find(item =>
+    const flFirst = fl.split(" ")[0];
+    match = results.find(item => {
+      const ph = item.professor_header;
+      const phFirst = ph.first_name.toLowerCase();
+      return ph.last_name.toLowerCase() === ll &&
+             (phFirst === flFirst ||
+              phFirst.startsWith(flFirst + " ") ||
+              fl.startsWith(phFirst + " "));
+    });
+  }
+
+  // 3. Last-name-only — only when unambiguous (exactly 1 result with that last name)
+  if (!match) {
+    const lastMatches = results.filter(item =>
       item.professor_header.last_name.toLowerCase() === ll
     );
+    if (lastMatches.length === 1) match = lastMatches[0];
   }
-  if (!match) match = results[0];
 
   return match?.professor_header || null;
 }
@@ -91,15 +107,15 @@ async function lookupCulpa(first, last) {
 
 /* ── Main lookup (with cache) ────────────────────────────── */
 
-async function lookupProfessor(name) {
-  const key = `culpa:${name.toLowerCase().trim()}`;
+async function lookupProfessor(name, uni) {
+  const key = uni ? `culpa:uni:${uni}` : `culpa:${name.toLowerCase().trim()}`;
   const cached = await cacheGet(key);
   if (cached) return cached;
 
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return null;
 
-  const first = parts[0];
+  const first = parts.slice(0, -1).join(" "); // compound first names e.g. "Mary Ann"
   const last  = parts[parts.length - 1];
 
   let result;
@@ -117,7 +133,7 @@ async function lookupProfessor(name) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "CULPA_LOOKUP") {
-    lookupProfessor(msg.name).then(result => sendResponse({ result }));
+    lookupProfessor(msg.name, msg.uni).then(result => sendResponse({ result }));
     return true;
   }
   if (msg.type === "CULPA_CLEAR_CACHE") {
