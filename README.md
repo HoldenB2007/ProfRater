@@ -95,10 +95,10 @@ Two scanners run on every DOM change (debounced 600ms):
 
 | Scanner | Selector | Name format |
 |---------|----------|-------------|
-| Course section rows | `span.instructor > div.text` | `Last, First (uni)` |
+| Instructor renderings (section rows, planner, schedule) | `div.text` inside `span.ins-display` (UNI in a sibling `span.instructor-uni[data-uni]`) | `Last, First` in text, UNI in `data-uni` |
 | Instructor autocomplete dropdown | `mat-option` containing a UNI pattern `(abc123)` | `First Last (uni)` |
 
-`parseVergilName()` handles both formats: strips the UNI, flips comma-separated names.
+`parseVergilName()` handles both formats: strips any UNI in the text, flips comma-separated names (including multi-word last names like `De Jesus, Joey`), and passes an explicit first/last split to the lookup when the comma form makes it unambiguous.
 
 A single shared tooltip div is appended to `document.body` (not inside the badge) to avoid inheriting opacity from Vergil's table row transitions.
 
@@ -109,9 +109,9 @@ Receives `CULPA_LOOKUP` messages from the content script.
 **Lookup flow (2 API calls in sequence):**
 
 1. `GET /api/professor/search?queryString={First Last}&maxResults=20`
-   - Returns array of `{ professor_header: { professor_id, first_name, last_name, nugget } }`
+   - Returns array of `{ professor_header: { professor_id, first_name, last_name, nugget, uni } }`
    - Nugget values: `0=None`, `1=Bronze`, `2=Silver`, `3=Gold`
-   - Matches by exact name → last name only → first result
+   - Match priority: UNI (exact, when CULPA has it) → exact name → partial first-name → unambiguous nickname/short-form (Chris→Christian, Mike→Michael) → unambiguous last-name-only → no badge (`not found`); never guesses
 2. `GET /api/professor_page/card/{professor_id}`
    - Returns `professor_summary.avg_rating` and `professor_summary.num_reviews`
 
@@ -137,8 +137,8 @@ The API was discovered by downloading `culpa.info/static/js/main.*.js` and grepp
 
 Vergil is an **Angular Material SPA** at `vergil.columbia.edu`.
 
-- Course section rows: `<span class="instructor"><a><div class="text">Last, First (uni)</div></a></span>`
-- Badges are inserted with `span.instructor.insertAdjacentElement("afterend", badge)` — not inside the `<a>` tag (invalid HTML)
+- Instructor renderings (all pages): `<span class="ins-display"><a>…<div class="text">Last, First </div><span class="instructor-uni" data-uni="lg233"></span>…</a></span>` — the visible `(uni)` is CSS-generated from `data-uni`, not in the text
+- Badges are inserted with `insertAdjacentElement("afterend", badge)` on the wrapper span — not inside the `<a>` tag (invalid HTML)
 - Instructor autocomplete: `<mat-option>First Last (uni)</mat-option>` — badges appended inside the option
 - Vergil applies opacity transitions to table rows; the tooltip must live on `document.body` to avoid inheriting opacity
 
@@ -146,9 +146,9 @@ Vergil is an **Angular Material SPA** at `vergil.columbia.edu`.
 
 If badges stop appearing:
 1. Open Vergil → right-click an instructor name → Inspect
-2. Find the element containing `Last, First (uni)` text
+2. Find the element containing the `Last, First` text and note where the UNI lives (text or a `data-uni` attribute)
 3. Update `findInstructorElements()` selector in `content.js`
-4. Check `processElement()` if the child text element path changed
+4. Check `processElement()` if the text/UNI element paths changed
 
 ## Customization
 
