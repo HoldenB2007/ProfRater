@@ -7,6 +7,23 @@ const CACHE_TTL  = 1000 * 60 * 60 * 24; // 24 h
 // Nugget values from culpa.info source: 0=None, 1=Bronze, 2=Silver, 3=Gold
 const NUGGET_LABEL = { 0: "None", 1: "Bronze", 2: "Silver", 3: "Gold" };
 
+// Nicknames that aren't plain prefixes of the formal name (those are handled
+// generically). Lowercase nickname → formal forms.
+const NICKNAMES = {
+  mike: ["michael"], bob: ["robert"], bobby: ["robert"], bill: ["william"],
+  billy: ["william"], dick: ["richard"], rick: ["richard"], ricky: ["richard"],
+  jim: ["james"], jimmy: ["james"], jack: ["john"], ted: ["theodore", "edward"],
+  tony: ["anthony"], andy: ["andrew"], drew: ["andrew"], joey: ["joseph"],
+  kate: ["katherine", "kathryn", "catherine"], katie: ["katherine", "kathryn", "catherine"],
+  kathy: ["katherine", "kathryn", "catherine"], liz: ["elizabeth"], beth: ["elizabeth"],
+  betsy: ["elizabeth"], peggy: ["margaret"], meg: ["margaret"], maggie: ["margaret"],
+  steve: ["stephen"], hank: ["henry"], harry: ["henry", "harold"], larry: ["lawrence"],
+  gene: ["eugene"], chuck: ["charles"], gabe: ["gabriel"], abby: ["abigail"],
+  becky: ["rebecca"], cindy: ["cynthia"], sandy: ["sandra"], mandy: ["amanda"],
+  frank: ["francis"], terry: ["terence"], jerry: ["gerald", "jerome"],
+  toby: ["tobias"], nate: ["nathaniel"]
+};
+
 /* ── Cache helpers (chrome.storage.local) ───────────────── */
 
 async function cacheGet(key) {
@@ -26,24 +43,40 @@ async function cacheSet(key, data) {
 
 /* ── CULPA API lookup ────────────────────────────────────── */
 
-async function searchProfessor(first, last) {
+async function searchProfessor(first, last, uni) {
   // The SPA calls /api/professor/search?queryString=...&maxResults=...
   const query = encodeURIComponent(`${first} ${last}`);
   const url = `${CULPA_BASE}/api/professor/search?queryString=${query}&maxResults=20`;
   // Let network/HTTP errors throw — caller distinguishes them from genuine misses
   const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok) { console.error("[CULPA] search HTTP", r.status, url); throw new Error(`HTTP ${r.status}`); }
   const results = await r.json();
   if (!Array.isArray(results) || !results.length) return null;
 
-  const fl = first.toLowerCase();
-  const ll = last.toLowerCase();
+  // CULPA sometimes collapses compound last names ("De Jesus" → "Dejesus"),
+  // so last names compare with spaces/hyphens/apostrophes stripped; first
+  // names keep spaces (the prefix tier relies on them) but treat hyphens
+  // as spaces ("Mary-Ann" vs "Mary Ann")
+  const normLast  = s => (s || "").toLowerCase().replace(/[\s'-]+/g, "");
+  const normFirst = s => (s || "").toLowerCase().replace(/-/g, " ");
+  const fl = normFirst(first);
+  const ll = normLast(last);
+
+  // 0. UNI match — exact and unambiguous, but CULPA's uni field is only
+  //    partially populated, so the name tiers below remain as fallback
+  if (uni) {
+    const ul = uni.toLowerCase();
+    const uniMatch = results.find(item =>
+      item.professor_header.uni?.toLowerCase() === ul
+    );
+    if (uniMatch) return uniMatch.professor_header;
+  }
 
   // 1. Exact match (full first name + last name)
   let match = results.find(item => {
     const ph = item.professor_header;
-    return ph.first_name.toLowerCase() === fl &&
-           ph.last_name.toLowerCase()  === ll;
+    return normFirst(ph.first_name) === fl &&
+           normLast(ph.last_name)   === ll;
   });
 
   // 2. Partial first-name match — handles CULPA/Vergil storing different lengths
@@ -52,18 +85,39 @@ async function searchProfessor(first, last) {
     const flFirst = fl.split(" ")[0];
     match = results.find(item => {
       const ph = item.professor_header;
-      const phFirst = ph.first_name.toLowerCase();
-      return ph.last_name.toLowerCase() === ll &&
+      const phFirst = normFirst(ph.first_name);
+      return normLast(ph.last_name) === ll &&
              (phFirst === flFirst ||
               phFirst.startsWith(flFirst + " ") ||
               fl.startsWith(phFirst + " "));
     });
   }
 
+  // 2.5 Nickname / short-form first name — e.g. Vergil "Chris Murphy", CULPA
+  //     "Christian Murphy". Generic rule: one first name is a prefix (≥3 chars)
+  //     of the other; plus the NICKNAMES table for non-prefix pairs (Mike →
+  //     Michael). Only when unambiguous (exactly 1 candidate with that last name).
+  if (!match) {
+    const flFirst = fl.split(" ")[0];
+    const flAlts  = NICKNAMES[flFirst] || [];
+    const cands = results.filter(item => {
+      const ph = item.professor_header;
+      if (normLast(ph.last_name) !== ll) return false;
+      const phFirst = normFirst(ph.first_name).split(" ")[0];
+      if (!phFirst || phFirst === flFirst) return false;
+      const [shorter, longer] = flFirst.length <= phFirst.length
+        ? [flFirst, phFirst] : [phFirst, flFirst];
+      return (shorter.length >= 3 && longer.startsWith(shorter)) ||
+             flAlts.includes(phFirst) ||
+             (NICKNAMES[phFirst] || []).includes(flFirst);
+    });
+    if (cands.length === 1) match = cands[0];
+  }
+
   // 3. Last-name-only — only when unambiguous (exactly 1 result with that last name)
   if (!match) {
     const lastMatches = results.filter(item =>
-      item.professor_header.last_name.toLowerCase() === ll
+      normLast(item.professor_header.last_name) === ll
     );
     if (lastMatches.length === 1) match = lastMatches[0];
   }
@@ -83,8 +137,8 @@ async function getProfessorCard(professorId) {
   }
 }
 
-async function lookupCulpa(first, last) {
-  const prof = await searchProfessor(first, last);
+async function lookupCulpa(first, last, uni) {
+  const prof = await searchProfessor(first, last, uni);
   if (!prof) return null;
 
   const card      = await getProfessorCard(prof.professor_id);
@@ -107,25 +161,37 @@ async function lookupCulpa(first, last) {
 
 /* ── Main lookup (with cache) ────────────────────────────── */
 
-async function lookupProfessor(name, uni) {
-  const key = uni ? `culpa:uni:${uni}` : `culpa:${name.toLowerCase().trim()}`;
+async function lookupProfessor(name, uni, first, last) {
+  // "culpa2:" — v2 prefix invalidates pre-UNI-matching cache entries
+  const key = uni ? `culpa2:uni:${uni}` : `culpa2:${name.toLowerCase().trim()}`;
   const cached = await cacheGet(key);
   if (cached) return cached;
 
-  const parts = name.trim().split(/\s+/);
-  if (parts.length < 2) return null;
-
-  const first = parts.slice(0, -1).join(" "); // compound first names e.g. "Mary Ann"
-  const last  = parts[parts.length - 1];
+  // Content script sends an explicit first/last split when Vergil's
+  // "Last, First" comma form made it unambiguous (multi-word last names
+  // like "De Jesus"). Otherwise split on the final word, keeping compound
+  // first names e.g. "Mary Ann" intact.
+  if (!first || !last) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return null;
+    first = parts.slice(0, -1).join(" ");
+    last  = parts[parts.length - 1];
+  }
 
   let result;
   try {
-    result = await lookupCulpa(first, last);
-  } catch (_) {
+    result = await lookupCulpa(first, last, uni);
+  } catch (err) {
+    console.error("[CULPA] fetch failed:", err?.message || err);
     return { error: true }; // API down / network failure — don't cache
   }
 
-  if (result) await cacheSet(key, result);
+  if (result) {
+    console.log("[CULPA] found:", name, uni || "", "→", result.firstName, result.lastName, result.avgRating, `(${result.reviewCount} reviews)`);
+    await cacheSet(key, result);
+  } else {
+    console.log("[CULPA] no match:", JSON.stringify({ name, uni, first, last }));
+  }
   return result;
 }
 
@@ -133,7 +199,7 @@ async function lookupProfessor(name, uni) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "CULPA_LOOKUP") {
-    lookupProfessor(msg.name, msg.uni).then(result => sendResponse({ result }));
+    lookupProfessor(msg.name, msg.uni, msg.first, msg.last).then(result => sendResponse({ result }));
     return true;
   }
   if (msg.type === "CULPA_CLEAR_CACHE") {
