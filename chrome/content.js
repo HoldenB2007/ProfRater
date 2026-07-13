@@ -4,7 +4,11 @@
   "use strict";
 
   const ATTR = "data-culpa";
-  const DEBOUNCE_MS = 600;
+  const KEY_ATTR = "data-culpa-key"; // which instructor the stamp belongs to —
+  // Angular recycles elements (swaps text, keeps the node), so a bare ATTR
+  // check would leave another instructor's badge on the reused element
+  const DEBOUNCE_MS = 250; // short: scans are cheap (attribute checks; network
+  // only for genuinely new instructors) and dropdown recycling needs fast rescans
 
   /* ── Nugget config ───────────────────────────────────── */
 
@@ -17,18 +21,48 @@
 
   /* ── Messaging ───────────────────────────────────────── */
 
-  function lookup(name, uni) {
+  function lookup(name, uni, first, last) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ type: "CULPA_LOOKUP", name, uni }, r => {
-        if (chrome.runtime.lastError) resolve(null);
-        else resolve(r?.result ?? null);
-      });
+      try {
+        chrome.runtime.sendMessage({ type: "CULPA_LOOKUP", name, uni, first, last }, r => {
+          // Messaging failure (e.g. orphaned content script after an extension
+          // reload) is an error, NOT a "not found" — never show a false miss
+          if (chrome.runtime.lastError) resolve({ error: true });
+          else resolve(r?.result ?? null);
+        });
+      } catch (_) {
+        resolve({ error: true }); // "Extension context invalidated" throw
+      }
     });
   }
 
   function extractUni(raw) {
     const m = raw.match(/\(([a-z]+\d+)\)/i);
     return m ? m[1].toLowerCase() : null;
+  }
+
+  // UNI from the wrapper's data-uni span (trusted only on a genuine instructor
+  // wrapper — a loose parent may contain other instructors' UNIs), else from text
+  function wrapperUni(wrapper, raw) {
+    const attr = wrapper.matches("span.ins-display, span.instructor")
+      ? wrapper.querySelector(".instructor-uni[data-uni]")?.getAttribute("data-uni")
+      : null;
+    return attr ? attr.toLowerCase() : extractUni(raw);
+  }
+
+  // Identity of an instructor rendering — used to detect element recycling
+  function culpaKey(uni, name) {
+    return uni || name.toLowerCase();
+  }
+
+  // Element text minus any badge we previously injected into it
+  function textWithoutBadges(el) {
+    let s = "";
+    el.childNodes.forEach(n => {
+      if (n.nodeType === Node.TEXT_NODE) s += n.textContent;
+      else if (n.nodeType === Node.ELEMENT_NODE && !n.classList.contains("culpa-badge")) s += n.textContent;
+    });
+    return s;
   }
 
   function makeErrorBadge() {
@@ -124,20 +158,24 @@
     "der","den","ten","ter","af","av","op","zum","zur","y","e","o"
   ]);
 
-  // Vergil format: "Last, First  (uni)" → "First Last"
+  // Vergil format: "Last, First  (uni)" → { name: "First Last", first, last }
+  // first/last are only set when the comma form makes the split unambiguous
+  // (handles multi-word last names like "De Jesus, Joey"); otherwise null and
+  // the background falls back to splitting on the final word.
   function parseVergilName(raw) {
     // Strip UNI in parentheses e.g. " (lp2149)"
     let t = raw.trim().replace(/\s*\([^)]+\)\s*$/, "").trim();
+    let first = null, last = null;
 
     // Convert "Last, First" → "First Last"
-    if (/^[^\s,]+,\s*\S/.test(t)) {
+    if (/^[^,]+,\s*\S/.test(t)) {
       const commaIdx = t.indexOf(",");
-      const last  = t.slice(0, commaIdx).trim();
-      const first = t.slice(commaIdx + 1).trim();
+      last  = t.slice(0, commaIdx).trim();
+      first = t.slice(commaIdx + 1).trim();
       t = `${first} ${last}`;
     }
 
-    return t;
+    return { name: t, first, last };
   }
 
   function isValidName(text) {
@@ -153,11 +191,40 @@
 
   /* ── Vergil DOM scanning ─────────────────────────────── */
 
-  // Course section rows: span.instructor > div.text ("Last, First (uni)")
+  // Instructor names anywhere on the page. Vergil renders every instructor
+  // through one shared component:
+  //   <span class="ins-display"><a>…<div class="text">Last, First </div>
+  //     <span class="instructor-uni" data-uni="lg233"></span>…</a></span>
+  // (The visible "(uni)" is CSS-generated from data-uni — not in the text.)
+  // Legacy markup (span.instructor with the UNI in the text) is kept as a
+  // fallback. div.text is generic Angular Material, so bare ones must look
+  // instructor-shaped ("Last, First" or a "(uni)" in the text) to qualify.
   function findInstructorElements() {
     const found = [];
-    document.querySelectorAll("span.instructor").forEach(el => {
-      if (!el.getAttribute(ATTR)) found.push(el);
+    document.querySelectorAll("div.text").forEach(textEl => {
+      const raw = textEl.textContent || "";
+      let wrapper = textEl.closest("span.ins-display, span.instructor");
+      if (!wrapper) {
+        // Bare div.text (no instructor wrapper): qualifies only with a "(uni)"
+        // in its own text — comma form alone matches too much ("New York, NY")
+        if (!/\([a-z]+\d+\)/i.test(raw)) return;
+        wrapper = textEl.parentElement;
+      }
+      if (!wrapper) return;
+
+      const hasUniAttr = !!wrapper.querySelector(".instructor-uni[data-uni]");
+      if (!hasUniAttr &&
+          !/^[^,]+,\s*\S/.test(raw.trim()) &&
+          !/\([a-z]+\d+\)/i.test(raw)) return;
+      const parsed = parseVergilName(raw);
+      if (!isValidName(parsed.name)) return;
+
+      // Skip only if the stamp belongs to THIS instructor (recycled elements
+      // carry another instructor's stamp and must be re-processed)
+      if (wrapper.getAttribute(ATTR) &&
+          wrapper.getAttribute(KEY_ATTR) === culpaKey(wrapperUni(wrapper, raw), parsed.name)) return;
+
+      found.push({ wrapper, textEl });
     });
     return found;
   }
@@ -166,32 +233,41 @@
   function findDropdownElements() {
     const found = [];
     document.querySelectorAll("mat-option").forEach(el => {
-      if (!el.getAttribute(ATTR) && /\([a-z]+\d+\)/i.test(el.textContent)) {
-        found.push(el);
-      }
+      const raw = textWithoutBadges(el);
+      if (!/\([a-z]+\d+\)/i.test(raw)) return;
+      // Re-process recycled mat-options whose text changed under our stamp
+      if (el.getAttribute(ATTR) &&
+          el.getAttribute(KEY_ATTR) === culpaKey(extractUni(raw), parseVergilName(raw).name)) return;
+      found.push(el);
     });
     return found;
   }
 
   /* ── Process a single element ─────────────────────────── */
 
-  async function processElement(el) {
-    if (el.getAttribute(ATTR)) return;
+  async function processElement({ wrapper: el, textEl }) {
+    const raw = textEl.textContent || "";
+    const uni = wrapperUni(el, raw);
+    const { name, first, last } = parseVergilName(raw);
+    const key = culpaKey(uni, name);
+    if (el.getAttribute(ATTR) && el.getAttribute(KEY_ATTR) === key) return;
+
     el.setAttribute(ATTR, "pending");
-
-    const textEl = el.querySelector("div.text");
-    if (!textEl) { el.setAttribute(ATTR, "skip"); return; }
-
-    const raw  = textEl.textContent || "";
-    const uni  = extractUni(raw);
-    const name = parseVergilName(raw);
+    el.setAttribute(KEY_ATTR, key);
+    // Recycled element: drop the previous instructor's badge (our badge is
+    // inserted as the wrapper's next sibling)
+    if (el.nextElementSibling?.classList?.contains("culpa-badge")) {
+      el.nextElementSibling.remove();
+    }
 
     if (!isValidName(name)) {
       el.setAttribute(ATTR, "skip");
       return;
     }
 
-    const data = await lookup(name, uni);
+    const data = await lookup(name, uni, first, last);
+    // Element recycled to another instructor while we awaited — stale result
+    if (el.getAttribute(KEY_ATTR) !== key) return;
     if (!data) {
       el.setAttribute(ATTR, "miss");
       const nf = makeNotFoundBadge();
@@ -214,15 +290,22 @@
   }
 
   async function processDropdownElement(el) {
-    if (el.getAttribute(ATTR)) return;
-    el.setAttribute(ATTR, "pending");
-
-    const raw  = el.textContent || "";
+    const raw  = textWithoutBadges(el);
     const uni  = extractUni(raw);
-    const name = parseVergilName(raw);
+    const { name, first, last } = parseVergilName(raw);
+    const key  = culpaKey(uni, name);
+    if (el.getAttribute(ATTR) && el.getAttribute(KEY_ATTR) === key) return;
+
+    el.setAttribute(ATTR, "pending");
+    el.setAttribute(KEY_ATTR, key);
+    // Recycled element: drop the previous instructor's badge (appended inside)
+    el.querySelectorAll(":scope > .culpa-badge").forEach(b => b.remove());
+
     if (!isValidName(name)) { el.setAttribute(ATTR, "skip"); return; }
 
-    const data = await lookup(name, uni);
+    const data = await lookup(name, uni, first, last);
+    // Element recycled to another instructor while we awaited — stale result
+    if (el.getAttribute(KEY_ATTR) !== key) return;
     if (!data) {
       el.setAttribute(ATTR, "miss");
       el.appendChild(makeNotFoundBadge());
